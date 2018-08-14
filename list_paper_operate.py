@@ -26,6 +26,8 @@ def operate_list_paper(list_paper_url, category):
     for string in all_divs:
         item = string.find('a', target='_blank')  # 文章标题与链接
         href = item.get('href')  # 获取文章url
+        if 'www.cnki.com.cn' not in href:
+            continue
         logger.info('current paper info link {}'.format(href))
         title = item.get_text()  # 获取文章标题
         year_count = string.find('span', class_='year-count')  # 获取文章出处与引用次数
@@ -47,11 +49,22 @@ def operate_list_paper(list_paper_url, category):
 
         download_cite_items = year_count.contents[2].string.split('|')
         download_end_index = download_cite_items[0].index('）')
-        download = int(download_cite_items[0][5:download_end_index])
+        if download_end_index == 5:
+            download = 0
+        else:
+            download = int(download_cite_items[0][5:download_end_index])
         cite_end_index = download_cite_items[1].index('）')
         if cite_end_index == 6:
             cite = 0
         else:
             cite = int(download_cite_items[1][6:cite_end_index])
-        temp_paper = paper.create_paper(href, category, title, publisher, year, download, cite)
-        papers.append(temp_paper)
+            try:
+                temp_paper = paper.create_paper(href, category, title, publisher, year, download, cite)
+                papers.append(temp_paper)
+            except:
+                logger.info('paper spider fail url {}'.format(href))
+    return papers
+
+
+def insert_papers_into_database(papers):
+    pass

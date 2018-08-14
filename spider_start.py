@@ -8,6 +8,7 @@ import math
 import logging
 import socket
 import list_paper_operate
+import pymysql
 
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
@@ -69,6 +70,23 @@ if __name__ == '__main__':
     cf.set('cnki', 'max_page', str(max_page))
     cf.write(open('cnki.conf', 'w', encoding='utf-8'))
 
+    # 打开数据库连接
+    db = pymysql.connect(host='localhost', port=3306, user='root', passwd='root', db='gear_paper', charset='utf8')
+    # 使用cursor()方法获取操作游标
+    cursor = db.cursor()
+
+    # SQL 插入语句
+    sql = "INSERT INTO paper(title, url, year,authors," \
+          "keywords,abstract,publisher,cite,download," \
+          "unit,reference,category) " \
+          "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    #  (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+
+    # sql = "INSERT INTO paper(abstract, authors, category,cite," \
+    #       "download,keywords,publisher,reference,title," \
+    #       "unit,url,year) " \
+    #       "VALUES (%s,%s,%s,%d,%d,%s,%s,%d,%s,%s,%s,%d)"
+
     for i in range(current_page, max_page):
         page_num = 15
         page_str_num = i * page_num
@@ -78,7 +96,8 @@ if __name__ == '__main__':
         success = False
         while attempts<50 and not success:
             try:
-                list_paper_operate.operate_list_paper(page_url, category)
+                papers = list_paper_operate.operate_list_paper(page_url, category)
+
                 socket.setdefaulttimeout(10)  # 设置10秒后连接超时
                 success = True
             except socket.error:
@@ -91,7 +110,20 @@ if __name__ == '__main__':
                 print("Start第" + str(attempts) + "次重试！！")
                 if attempts == 50:
                     break
-        cf.set('cnki', 'current_page', str(i))
-        cf.write(open("cnki.conf", "w", encoding='utf-8'))
+        try:
+            paper_objects = []
+            for paper in papers:
+                paper_objects.append((paper.title, paper.url, paper.year, paper.authors, paper.keywords, paper.abstract,
+                                      paper.publisher, paper.cite, paper.download, paper.unit, paper.reference,
+                                      paper.category))
+            cursor.executemany(sql, paper_objects)
+            cf.set('cnki', 'current_page', str(i))
+            cf.write(open("cnki.conf", "w", encoding='utf-8'))
+        except Exception as e:
+            db.rollback()
+            print("执行MySQL: %s 时出错：%s" % (sql, e))
+        db.commit()
     # spider_paper.spider_paper()  # spider_paper补全文章信息
+    cursor.close()
+    db.close()
     logger.info('spider end!!!')

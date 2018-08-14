@@ -6,11 +6,11 @@ import socket
 
 class Paper(object):
 
-    def __init__(self, url, year, title, authors, keywords, abstract, publisher, cite, download, unit, reference,
+    def __init__(self, title, url, year, authors, keywords, abstract, publisher, cite, download, unit, reference,
                  category):
+        self.title = title
         self.url = url
         self.year = year
-        self.title = title
         self.authors = authors
         self.keywords = keywords
         self.abstract = abstract
@@ -23,7 +23,7 @@ class Paper(object):
 
 
 def create_paper(url, category, title, publisher, year, download, cite):
-    temp_paper = Paper(url, year, title, '', '', '', publisher, cite, download, '', '', category)
+    temp_paper = Paper(title, url, year, '', '', '', publisher, cite, download, '', '', category)
     attempts = 0
     success = False
     while attempts<50 and not success:
@@ -49,9 +49,11 @@ def create_paper(url, category, title, publisher, year, download, cite):
     author = ''
     # 获取作者名字
     for item in author_div:
-        author = ' '.join(item.get_text().split())
-
-    abstract = str(abstract_div[0].contents[2])
+        temp_paper.authors = ' '.join(item.get_text().split())
+    try:
+        temp_paper.abstract = str(abstract_div[0].contents[2])
+    except:
+        temp_paper.abstract = ''
 
     # ifreferen = soup.find_all('td', class_='b14', rowspan='2')
     # ref = ''
@@ -76,38 +78,13 @@ def create_paper(url, category, title, publisher, year, download, cite):
         elif category == '会议论文':
             unit = str(author_unit_scope.contents[2].contents[0])
         else:
-            unit = str(author_unit_scope.contents[3].contents[0].replace(';', ''))
+            if len(author_unit_scope.contents[3].contents)>0:
+                unit = str(author_unit_scope.contents[3].contents[0].replace(';', ''))
+            else:
+                unit = ''
     else:
         unit = ''
+    temp_paper.unit = unit
     author_unit = ''
     author_unit_text = author_unit_scope.get_text()
-    # print(author_unit_text)
-    if '【作者单位】：' in author_unit_text:
-        auindex = author_unit_text.find('【作者单位】：', 0)
-    else:
-        auindex = author_unit_text.find('【学位授予单位】：', 0)
-    for k in range(auindex, len(author_unit_text)):
-        if author_unit_text[k] == '\n' or author_unit_text[k] == '\t' or author_unit_text[k] == '\r' or \
-                author_unit_text[k] == '】':
-            continue
-        if author_unit_text[k] == ' ' and author_unit_text[k + 1] == ' ':
-            continue
-        if author_unit_text[k] != '【':
-            author_unit = author_unit + author_unit_text[k]
-        if author_unit_text[k] == '【' and k != auindex:
-            break
-    # 获取关键字
-    # key_word = ''
-    # kwindex = author_unit_text.find('【关键词】：', 0)
-    # if kwindex != -1:
-    #     for k in range(kwindex, len(author_unit_text)):
-    #         if author_unit_text[k] == '\n' or author_unit_text[k] == '\t' or author_unit_text[k] == '\r' or \
-    #                 author_unit_text[k] == '】':
-    #             continue
-    #         if author_unit_text[k] == ' ' and author_unit_text[k + 1] == ' ':
-    #             continue
-    #         if author_unit_text[k] != '【':
-    #             key_word = key_word + author_unit_text[k]
-    #         if author_unit_text[k] == '【' and k != kwindex:
-    #             break
     return temp_paper

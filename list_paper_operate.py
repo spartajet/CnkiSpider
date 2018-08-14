@@ -26,7 +26,7 @@ def operate_list_paper(list_paper_url, category):
     for string in all_divs:
         item = string.find('a', target='_blank')  # 文章标题与链接
         href = item.get('href')  # 获取文章url
-        if 'www.cnki.com.cn' not in href:
+        if 'cnki.com.cn' not in href :
             continue
         logger.info('current paper info link {}'.format(href))
         title = item.get_text()  # 获取文章标题
